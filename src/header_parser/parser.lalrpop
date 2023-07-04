@@ -1,0 +1,111 @@
+use crate::header_parser::ast::{Enum, Struct, Type, TemplateArgument, ConstExpr, StructItem, Decl, TopLevel, TypeDef, File, TemplateStruct, TemplateParameter};
+use std::str::FromStr;
+
+grammar;
+
+pub File: File = TopLevel* => File { top_levels: <> };
+
+TopLevel: TopLevel = {
+    <Struct> => TopLevel::Struct(<>),
+    <TypeDef> => TopLevel::TypeDef(<>),
+    <TemplateStruct> => TopLevel::TemplateStruct(<>),
+    <Enum> => TopLevel::Enum(<>),
+    Function => TopLevel::Other,
+};
+
+TypeDef: TypeDef = "typedef" <t: Type> <n: Ident> ";" => TypeDef { actual: t, new: n };
+
+Enum: Enum = "enum" "class"? <name:Ident> "{" <variants: Comma<Ident>> "}" ";" => Enum { name, variants };
+
+TemplateStruct: TemplateStruct = "template" "<" <p: Comma<TemplateParameter>> ">" <s: Struct> => TemplateStruct { parameters: p, struct_: s };
+
+TemplateParameter: TemplateParameter = {
+    "typename" <n: Ident> => TemplateParameter::TypeName(n),
+    "size_t" <n: Ident> => TemplateParameter::Const(n)
+};
+
+Struct: Struct = "struct" <name: Ident> "{" <s:StructItem*> "}" ";" => Struct { name, items: s };
+
+StructItem: StructItem = {
+    <d: Decl> ("=" Const)? ";" => StructItem::Field { decl: d },
+    <d: Decl> "{" "}" ";" => StructItem::Field { decl: d },
+    Ident ParenthesizedJunk InitializerList BracedJunk => StructItem::Other,
+    Type Ident ParenthesizedJunk "const"? BracedJunk => StructItem::Other,
+};
+
+InitializerList: () = (":" (Initializer ",")* Initializer) => ();
+Initializer: () = Ident ParenthesizedJunk => ();
+
+Decl: Decl = <t:Type> <i:Ident> <a:("[" <Const> "]")*> => Decl { typ: t, name: i, arrays: a };
+
+Function: () = Type Ident ParenthesizedJunk "const"? BracedJunk => ();
+
+Type: Type = {
+    <i: Ident> => Type::Name(i),
+    <i: Ident> "<" <args:Comma<TemplateArgument>> ">" => Type::Template(i, args)
+};
+
+TemplateArgument: TemplateArgument = {
+    <Type> => TemplateArgument::Type(<>),
+    <NonIdentConst> => TemplateArgument::Const(<>),
+};
+
+NonIdentConst: ConstExpr = {
+    <Integer> => ConstExpr::Integer(<>),
+    <Float> => ConstExpr::Float(<>)
+};
+
+Const: ConstExpr = {
+    <Ident> => ConstExpr::Name(<>),
+    <Integer> => ConstExpr::Integer(<>),
+    <Float> => ConstExpr::Float(<>)
+};
+
+Ident: String = <s: r"[a-zA-Z_][a-zA-Z_0-9]*"> => s.to_string();
+String: String = <s: r#""(?:[^"\\]|\\.)*""#> => s.to_string();
+Integer: usize = <s: r"[0-9]+"> => usize::from_str(s).unwrap();
+Float: f64 = <s: r"[0-9]+\.[0-9]*"> => f64::from_str(s).unwrap();
+
+ParenthesizedJunk: () = "(" Junk* ")" => ();
+BracketedJunk: () = "[" Junk* "]" => ();
+BracedJunk: () = "{" Junk* "}" => ();
+
+Junk: () = {
+    Ident => (),
+    Integer => (),
+    Float => (),
+    String => (),
+    "size_t" => (),
+    "const" => (),
+    "." => (),
+    "," => (),
+    "?" => (),
+    "/" => (),
+    "=" => (),
+    "+" => (),
+    "-" => (),
+    "*" => (),
+    "~" => (),
+    "!" => (),
+    "%" => (),
+    "^" => (),
+    "&" => (),
+    "|" => (),
+    ":" => (),
+    "<" => (),
+    ">" => (),
+    ";" => (),
+    ParenthesizedJunk => (),
+    BracketedJunk => (),
+    BracedJunk => (),
+}
+
+Comma<T>: Vec<T> = {
+    <mut v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};

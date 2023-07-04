@@ -1,0 +1,6 @@
+make the header checkbox mean that the parser ignores the first 41 bytes (the 41st byte is a null byte)
+cache tables, make that an option for source as well
+make custom caching functions to get around that confy uses pretty printing (wastes a large amount on the compressed packet)
+refactor the ui code into files and a module
+add range filters to the plotting
+add scaling to the plotting

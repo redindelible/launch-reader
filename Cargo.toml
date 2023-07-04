@@ -1,0 +1,20 @@
+[package]
+name = "launch-reader"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+lalrpop = { version = "0.20.0", features = ["default", "lexer", "unicode"] }
+
+[dependencies]
+lalrpop-util = { version = "0.20.0", features = ["default", "lexer", "unicode"] }
+regex = "1.8.3"
+egui = "0.22"
+eframe = "0.22"
+directories = "5.0"
+native-dialog = "0.6"
+serde = "1.0"
+serde_derive = "1.0"
+confy = "0.5"
+lz4_flex = "0.11.1"
+indexmap = "2.0.0"
